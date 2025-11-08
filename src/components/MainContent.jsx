@@ -10,6 +10,16 @@ import Select from "@mui/material/Select";
 import axios from "axios";
 import { useState, useEffect } from "react";
 
+// PHOTO
+import fajrImg from '../photo/6.jpg';
+import DhuhrImg from '../photo/4.jpg';
+import AsrImg from '../photo/5.jpg';
+import MaghribImg from '../photo/1.jpg';
+import IshaImg from '../photo/3.jpg';
+import MawaqitImg from '../photo/Mawaqit.png';
+
+
+
 import moment from "moment";
 import "moment/dist/locale/ar-dz";
 moment.locale("ar");
@@ -26,8 +36,7 @@ export default function MainContent() {
     const suffix = isPM ? "م" : "ص";
     return `${hh}:${minute} ${suffix}`;
   };
-  // TIMER
-
+  
   // STATES
   const [nextPrayerIndex,setNextPrayerIndex] = useState(2)
   const [timings, setTimings] = useState({
@@ -195,57 +204,48 @@ export default function MainContent() {
   }, [timings]);
 
   // Next Pray
-  const setupCountdownTimer = () => {
-    const momentNow = moment();
-    let prayerIndex = 2;
+const setupCountdownTimer = (testTime = null) => {
+  moment.locale("en"); 
+  const momentNow = testTime || moment();
+  let prayerIndex = 0;
 
-    if (
-      momentNow.isAfter(moment(timings["Fajr"], "hh:mm")) &&
-      momentNow.isBefore(moment(timings["Dhuhr"], "hh:mm"))
-    ) {
-      prayerIndex =1
-    }else if (
-      momentNow.isAfter(moment(timings["Dhuhr"], "hh:mm")) &&
-      momentNow.isBefore(moment(timings["Asr"], "hh:mm"))
-    ) {
-      prayerIndex =2
-    }else if  (
-      momentNow.isAfter(moment(timings["Asr"], "hh:mm")) &&
-      momentNow.isBefore(moment(timings["Maghrib"], "hh:mm"))
-    ) {
-      prayerIndex =3
-    }else if  (
-      momentNow.isAfter(moment(timings["Maghrib"], "hh:mm")) &&
-      momentNow.isBefore(moment(timings["Isha"], "hh:mm"))
-    ) {
-      prayerIndex =4
-    }else {
-      prayerIndex =0
+  const normalizeTime = (timeStr) => timeStr.replace("ص", "AM").replace("م", "PM").trim();
+
+  const fajrMoment = moment(moment().format("YYYY-MM-DD") + " " + normalizeTime(timings["Fajr"]), "YYYY-MM-DD hh:mm A");
+  const dhuhrMoment = moment(moment().format("YYYY-MM-DD") + " " + normalizeTime(timings["Dhuhr"]), "YYYY-MM-DD hh:mm A");
+  const asrMoment = moment(moment().format("YYYY-MM-DD") + " " + normalizeTime(timings["Asr"]), "YYYY-MM-DD hh:mm A");
+  const maghribMoment = moment(moment().format("YYYY-MM-DD") + " " + normalizeTime(timings["Maghrib"]), "YYYY-MM-DD hh:mm A");
+  const ishaMoment = moment(moment().format("YYYY-MM-DD") + " " + normalizeTime(timings["Isha"]), "YYYY-MM-DD hh:mm A");
+
+  const prayersMoments = [fajrMoment, dhuhrMoment, asrMoment, maghribMoment, ishaMoment];
+
+  for (let i = 0; i < prayersMoments.length; i++) {
+    if (momentNow.isBefore(prayersMoments[i])) {
+      prayerIndex = i;
+      break;
     }
-    setNextPrayerIndex(prayerIndex)
-
-    //now after knowing what the next prayer is, we can setup the countdown timer by getting the prayer’s time
-    const nextPrayerObject = prayersArray[prayerIndex]
-    const nextPrayerTime = timings[nextPrayerObject.key]
-    const nextPrayerTimeMoment = moment(nextPrayerTime, "hh:mm")
-
-    let remaningTime =  moment(nextPrayerTime,"hh:mm").diff(momentNow)
-
-    if(remaningTime < 0){
-      const midnightDiff = moment("23:59:59","hh:mm:ss").diff(momentNow)
-      const fajrToMidnightDiff = nextPrayerTimeMoment.diff(moment("00:00:00","hh:mm:ss"))
-      const totalDiffernce = midnightDiff +fajrToMidnightDiff
-      remaningTime = totalDiffernce
+    if (i === prayersMoments.length - 1) {
+      prayerIndex = 0;
+      prayersMoments[0].add(1, "day");
     }
+  }
 
-    
+  setNextPrayerIndex(prayerIndex);
 
-    const durationRemainingTime = moment.duration(remaningTime)
-   setRemainingTime(
-  `${durationRemainingTime.hours()}:${String(durationRemainingTime.minutes()).padStart(2, '0')}:${String(durationRemainingTime.seconds()).padStart(2, '0')}`
-);
+  const nextPrayerMoment = prayersMoments[prayerIndex];
+  const remainingTime = nextPrayerMoment.diff(momentNow);
+  const durationRemainingTime = moment.duration(remainingTime);
 
-  };
+  setRemainingTime(
+    `${durationRemainingTime.hours()}:${String(durationRemainingTime.minutes()).padStart(2, "0")}:${String(durationRemainingTime.seconds()).padStart(2, "0")}`
+  );
+
+  // const nextPrayerObject = prayersArray[prayerIndex];
+  // console.log("🕒 الوقت الحالي:", momentNow.format("hh:mm A"));
+  // console.log("➡️ الصلاة القادمة:", nextPrayerObject?.displayName || "❌ غير محددة");
+};
+
+
   const handleCityChange = (event) => {
     const cityObject = avilableCities.find((city) => {
       return city.apiName === event.target.value;
@@ -266,7 +266,7 @@ export default function MainContent() {
         }}
       >
         <img
-          src="/public/photo/Mawaqit.png"
+          src={MawaqitImg}
           alt="Logo"
           style={{
             width: "420px",
@@ -345,15 +345,15 @@ export default function MainContent() {
         flexWrap="wrap"
         gap={2}
       >
-        <Prayer name="الفجر" time={timings.Fajr} image="/public/photo/6.jpg" />
-        <Prayer name="الظهر" time={timings.Dhuhr} image="/public/photo/4.jpg" />
-        <Prayer name="العصر" time={timings.Asr} image="/public/photo/5.jpg" />
+        <Prayer name="الفجر" time={timings.Fajr} image={fajrImg} />
+        <Prayer name="الظهر" time={timings.Dhuhr} image={DhuhrImg} />
+        <Prayer name="العصر" time={timings.Asr} image={AsrImg} />
         <Prayer
           name="المغرب"
           time={timings.Maghrib}
-          image="/public/photo/1.jpg"
+          image={MaghribImg}
         />
-        <Prayer name="العشاء" time={timings.Isha} image="/public/photo/3.jpg" />
+        <Prayer name="العشاء" time={timings.Isha} image={IshaImg}/>
       </Stack>
       {/* ===== END PRAYERS CARDS ===== */}
       {/* SELECT CITY */}
